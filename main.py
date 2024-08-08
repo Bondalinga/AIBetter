@@ -4,6 +4,7 @@ import pyperclip
 import pyautogui
 import time
 import tkinter as tk
+import threading
 
 # Set your OpenAI API key
 api_key = ""
@@ -12,8 +13,11 @@ openai.api_key = api_key
 # Create the main application window
 root = tk.Tk()
 root.overrideredirect(True)  # Remove the top bar
-root.geometry("400x150+1600+900")  # Adjust position for bottom-right corner
+root.geometry("125x50+1600+900")  # Adjust position for bottom-right corner
 root.attributes("-topmost", True)
+
+recording = False
+keystrokes = []
 
 # Allow window dragging
 def start_drag(event):
@@ -65,10 +69,6 @@ bg = create_rounded_rectangle(0, 0, 400, 150, 20, fill="lightgray")
 status_label = tk.Label(root, text="Waiting...", font=("Helvetica", 12), bg="lightgray")
 status_label.place(relx=0.5, rely=0.3, anchor="center")
 
-# Create a label to display instructions
-instructions = tk.Label(root, text="Press F1 to Complete Text, F2 to Correct Grammar, F3 to Improve Style, F4 to Simplify Text", font=("Helvetica", 10), bg="lightgray")
-instructions.place(relx=0.5, rely=0.6, anchor="center")
-
 # Create an exit button
 exit_button = tk.Button(root, text="Exit", command=root.destroy, font=("Helvetica", 10), bg="lightgray")
 exit_button.place(relx=0.5, rely=0.8, anchor="center")
@@ -90,7 +90,7 @@ def correct_grammar(prompt):
     response = openai.ChatCompletion.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "You are a professional writer that corrects grammar. If the grammar is correct don't output anything. Do not reply to my text and only do your intended purpose"},
+            {"role": "system", "content": "You are a professional writer that corrects grammar. If the grammar is correct don't output anything. Do not reply to my text and only do your intended purpose. and always correct the writing no matter what"},
             {"role": "user", "content": "Correct the grammar of the following text:\n" + prompt}
         ],
         max_tokens=500,
@@ -164,9 +164,6 @@ def process_text_with_function(func):
     root.update()
 
 # Define hotkey actions
-def on_f1():
-    process_text_with_function(complete_text)
-
 def on_f2():
     process_text_with_function(correct_grammar)
 
@@ -177,13 +174,61 @@ def on_f4():
     process_text_with_function(simplify_text)
 
 # Register hotkeys
-keyboard.add_hotkey('f1', on_f1)
 keyboard.add_hotkey('f2', on_f2)
 keyboard.add_hotkey('f3', on_f3)
 keyboard.add_hotkey('f4', on_f4)
 
+def start_recording():
+    global recording, keystrokes
+    recording = True
+    keystrokes = []
+    status_label.config(text="Recording...")
+
+def stop_recording():
+    global recording, keystrokes
+    recording = False
+    prompt = ''.join(keystrokes)
+    status_label.config(text="Processing...")
+    root.update()
+    a = complete_text(prompt)
+    set_clipboard_text(a)
+    pyautogui.hotkey('ctrl', 'v')
+    keystrokes = []
+    status_label.config(text="Processed...")
+    root.update()
+    time.sleep(2)
+    status_label.config(text="Waiting...")
+    root.update()
+
+def on_key_event(event):
+    global recording, keystrokes
+
+    if event.name == 'enter':
+        if recording:
+            stop_recording()
+    elif event.name == '#':
+        start_recording()
+    elif recording:
+        if event.name == 'space':
+            keystrokes.append(' ')
+        elif event.name == 'backspace':
+            if keystrokes:
+                keystrokes.pop()
+        else:
+            keystrokes.append(event.name)
+
+def start_listener():
+    keyboard.on_press(on_key_event)
+    keyboard.wait('esc')
+
+# Start the listener in a separate thread
+listener_thread = threading.Thread(target=start_listener)
+listener_thread.start()
+
 # Start the main loop for the tkinter window
-print("Script running... Press F1, F2, F3, or F4 to process highlighted text.")
+print("Script running... Press F2, F3, or F4 to process highlighted text.")
 root.mainloop()
+
+# Ensure the listener thread stops when the Tkinter window is closed
+listener_thread.join()
 print("Script terminated.")
-keyboard.wait('esc')
