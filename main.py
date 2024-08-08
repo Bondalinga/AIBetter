@@ -12,8 +12,8 @@ openai.api_key = api_key
 
 # Create the main application window
 root = tk.Tk()
-root.overrideredirect(True)  # Remove the top bar
-root.geometry("125x50+1600+900")  # Adjust position for bottom-right corner
+root.overrideredirect(True)
+root.geometry("125x50+1600+900")
 root.attributes("-topmost", True)
 
 recording = False
@@ -32,38 +32,8 @@ def do_drag(event):
 root.bind("<Button-1>", start_drag)
 root.bind("<B1-Motion>", do_drag)
 
-# Create a canvas for rounded corners
 canvas = tk.Canvas(root, width=400, height=150, highlightthickness=0)
 canvas.pack()
-
-# Function to create a rounded rectangle
-def create_rounded_rectangle(x1, y1, x2, y2, r, **kwargs):
-    points = [
-        x1+r, y1,
-        x1+r, y1,
-        x2-r, y1,
-        x2-r, y1,
-        x2, y1,
-        x2, y1+r,
-        x2, y1+r,
-        x2, y2-r,
-        x2, y2-r,
-        x2, y2,
-        x2-r, y2,
-        x2-r, y2,
-        x1+r, y2,
-        x1+r, y2,
-        x1, y2,
-        x1, y2-r,
-        x1, y2-r,
-        x1, y1+r,
-        x1, y1+r,
-        x1, y1
-    ]
-    return canvas.create_polygon(points, **kwargs, smooth=True)
-
-# Create rounded rectangle background
-bg = create_rounded_rectangle(0, 0, 400, 150, 20, fill="lightgray")
 
 # Create a label to display the status
 status_label = tk.Label(root, text="Waiting...", font=("Helvetica", 12), bg="lightgray")
@@ -141,9 +111,8 @@ def process_text_with_function(func):
     status_label.config(text="Processing...")
     root.update()
     
-    # Simulate Ctrl+C to copy the highlighted text
     pyautogui.hotkey('ctrl', 'c')
-    time.sleep(0.1)  # Short delay to ensure the clipboard is updated
+    time.sleep(0.1)
 
     original_text = get_clipboard_text()
     if original_text:
@@ -221,14 +190,11 @@ def start_listener():
     keyboard.on_press(on_key_event)
     keyboard.wait('esc')
 
-# Start the listener in a separate thread
 listener_thread = threading.Thread(target=start_listener)
 listener_thread.start()
 
-# Start the main loop for the tkinter window
 print("Script running... Press F2, F3, or F4 to process highlighted text.")
 root.mainloop()
 
-# Ensure the listener thread stops when the Tkinter window is closed
 listener_thread.join()
 print("Script terminated.")
